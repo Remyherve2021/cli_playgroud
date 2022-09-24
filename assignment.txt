@@ -1,0 +1,81 @@
+1- create a security group with port 22 and 80 open to the world
+2- create an EC2 instance using a lunix2 AMI , associate  the security group you created earlier to your Instance
+3- copy the public IP addresss and try to access the default page of Apache this will display the you host name (private ip)
+4- create a target group with port 80 and registered your instance to it
+5- create an application load balancer with a listener allow traffic to port 80 and associate it to your target group .
+6- use the load balancer url to query the Apache application running on your instance
+
+
+User-data script for Apache :
+
+#!/bin/bash
+yum update -y
+yum install -y httpd.x86_64
+systemctl start httpd.service
+systemctl enable httpd.service
+echo “Hello World from $(hostname -f)” > /var/www/html/index.html
+
+
+
+# create an ec2
+aws ec2 run-instances \
+--image-id  ami-05fa00d4c63e32376 \
+--count 1 \
+--instance-type t2.micro \
+--key-name devops \
+--security-group-ids  sg-04ccb689e6b1a1ea1 \
+--subnet-id subnet-0e51c7cdc56ff2f6f \
+--user-data file://script1.sh \
+--tag-specifications \
+'ResourceType=insance,Tags=[{Key=Name,Value=web1}]'
+# create target group
+aws elbv2 create-target-group \
+    --name bafang \
+    --protocol HTTP \
+    --port 80 \
+    --target-type instance \
+    --vpc-id vpc-0d30a66ab22577bfb
+# add target to target group
+aws elbv2 register-targets \
+    --target-group-arn arn:aws:elasticloadbalancing:us-east-1:482996790476:targetgroup/bafang/82e7c4364003f9ea \
+    --targets Id=i-07954589be752287d
+# create a load balancer
+aws elbv2 create-load-balancer --name my-load-balancer  \
+--subnets subnet-0e3f5cac72EXAMPLE subnet-081ec835f3EXAMPLE --security-groups sg-07e8ffd50fEXAMPLE
+#create listener
+aws elbv2 create-listener --load-balancer-arn loadbalancer-arn \
+--protocol HTTP --port 80  \
+--default-actions Type=forward,TargetGroupArn=targetgroup-arn
+12:07
+# create an ec2
+aws ec2 run-instances \
+--image-id  ami-05fa00d4c63e32376 \
+--count 1 \
+--instance-type t2.micro \
+--key-name devops \
+--security-group-ids  sg-04ccb689e6b1a1ea1 \
+--subnet-id subnet-0e51c7cdc56ff2f6f \
+--user-data file://script1.sh \
+--tag-specifications \
+'ResourceType=insance,Tags=[{Key=Name,Value=web1}]'
+
+# create target group
+aws elbv2 create-target-group \
+    --name bafang \
+    --protocol HTTP \
+    --port 80 \
+    --target-type instance \
+    --vpc-id vpc-0d30a66ab22577bfb
+
+# add target to target group
+aws elbv2 register-targets \
+    --target-group-arn arn:aws:elasticloadbalancing:us-east-1:482996790476:targetgroup/bafang/82e7c4364003f9ea \
+    --targets Id=i-07954589be752287d
+
+# create a load balancer
+aws elbv2 create-load-balancer --name my-load-balancer  \
+--subnets subnet-0e3f5cac72EXAMPLE subnet-081ec835f3EXAMPLE --security-groups sg-07e8ffd50fEXAMPLE
+#create listener
+aws elbv2 create-listener --load-balancer-arn loadbalancer-arn \
+--protocol HTTP --port 80  \
+--default-actions Type=forward,TargetGroupArn=targetgroup-arn
